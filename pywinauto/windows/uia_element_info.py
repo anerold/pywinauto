@@ -329,6 +329,16 @@ class UIAElementInfo(ElementInfo):
         except (NoPatternInterfaceError, COMError):
             # COMError also can be raised in case of attempt to get value of password EditBox
             return text_type('')
+        
+    @property
+    def item_type(self):
+        """StringData ANE 3.4.2024: return ItemType of the element"""
+        try:
+            val = self._element.CurrentItemType
+            return text_type('') if val is None else val
+        except COMError:
+            # probably element already doesn't exist
+            return text_type('')
 
     @property
     def legacy_action(self):
