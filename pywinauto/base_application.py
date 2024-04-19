@@ -81,6 +81,7 @@ import sys
 import os.path
 import time
 import locale
+import logging
 import codecs
 import collections
 import warnings
@@ -658,7 +659,7 @@ class WindowSpecification(object):
                 TimeoutError):
             return False
 
-    def dump_tree(self, depth=10, max_width=10, filename=None):
+    def dump_tree(self, depth=10, max_width=10, filename=None, timeout_ms=None):
         """
         Dump the 'identifiers' to console or a file
 
@@ -666,10 +667,9 @@ class WindowSpecification(object):
         a depth of **depth** (the whole subtree if **None**).
 
         :param depth: Max depth level of an element tree to dump (None: unlimited).
-
         :param max_width: Max number of children of each element to dump (None: unlimited).
-
         :param filename: Save tree to a specified file (None: print to stdout).
+        :param timeout_ms: Timeout in milliseconds to limit the duration of the dump process (None: unlimited).
 
         .. note:: The identifiers dumped by this method have been made
                unique. So if you have 2 edit boxes, they won't both have "Edit"
@@ -677,6 +677,25 @@ class WindowSpecification(object):
                referred to as "Edit", "Edit0", "Edit1" and the 2nd should be
                referred to as "Edit2".
         """
+
+        start_time = time.time()
+
+        def is_timeout() -> bool:
+            """
+            Check if the current time has exceeded the specified timeout.
+
+            This function calculates the elapsed time since a start time and
+            compares it against a given timeout value. It is used to determine
+            if a timeout has been reached during the execution of a long-running
+            process.
+
+            :return: True if the current time exceeds the start time plus the timeout, False otherwise.
+            """
+            nonlocal start_time, timeout_ms
+            if timeout_ms is None:
+                return False
+            return (time.time() - start_time) * 1000 > timeout_ms
+
         if depth is None:
             depth = sys.maxsize
         if max_width is None:
@@ -694,6 +713,9 @@ class WindowSpecification(object):
             elem_stack = collections.deque([(this_ctrl, None, 0)])
             root_node = ElementTreeNode(this_ctrl, current_id, [])
             while elem_stack:
+                if is_timeout():
+                    logging.warning(f"Timeout of '{timeout_ms}' milliseconds reached for application tree dump.")
+                    return
                 current_elem, current_elem_parent_children, current_node_depth = elem_stack.pop()
                 if current_elem is None:
                     elem_node = ElementTreeNode(None, current_id, [])
@@ -712,6 +734,9 @@ class WindowSpecification(object):
                             elem_stack.append((None, elem_node.children, current_node_depth + 1))
                             width_limit_reached = True
                         for i in range(min(len(child_elements) - 1, max_width - 1), -1, -1):
+                            if is_timeout():
+                                logging.warning(f"Timeout of '{timeout_ms}' milliseconds reached for application tree dump.")
+                                return  
                             elem_stack.append((child_elements[i], elem_node.children, current_node_depth + 1))
                     else:
                         depth_limit_reached = True
@@ -731,6 +756,9 @@ class WindowSpecification(object):
             # Build a dictionary of disambiguated list of control names
             name_ctrl_id_map = findbestmatch.UniqueDict()
             for index, ctrl in enumerate(all_ctrls):
+                if is_timeout():
+                    logging.warning(f"Timeout of '{timeout_ms}' milliseconds reached for application tree dump.")
+                    return  
                 ctrl_names = findbestmatch.get_control_names(ctrl, all_ctrls, txt_ctrls)
                 for name in ctrl_names:
                     name_ctrl_id_map[name] = index
@@ -742,6 +770,9 @@ class WindowSpecification(object):
 
         def print_identifiers(element_node, current_depth=0, log_func=print):
             """Recursively print ids for ctrls and their descendants in a tree-like format"""
+            if is_timeout():
+                logging.warning(f"Timeout of '{timeout_ms}' milliseconds reached for application tree dump.")
+                return
             if current_depth == 0:
                 if depth_limit_reached:
                     log_func('Warning: the whole hierarchy does not fit into depth={}. '
@@ -802,6 +833,9 @@ class WindowSpecification(object):
 
             if current_depth <= depth:
                 for child_elem in element_node.children:
+                    if is_timeout():
+                        logging.warning(f"Timeout of '{timeout_ms}' milliseconds reached for application tree dump.")
+                        return  
                     print_identifiers(child_elem, current_depth + 1, log_func)
 
         if filename is None:
