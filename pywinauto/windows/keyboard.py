@@ -966,17 +966,17 @@ def parse_keys(string,
                 print("MODS+", modifiers)
             continue
 
-        # Apply modifiers over a bunch of characters (not just one!)
-        elif c == "(":
-            # find the end of the bracketed text
-            end_pos = string.find(")", index)
-            if end_pos == -1:
-                raise KeySequenceError('`)` not found')
-            keys.extend(parse_keys(
-                    string[index:end_pos],
-                    modifiers=modifiers,
-                    vk_packet=vk_packet))
-            index = end_pos + 1
+        # # Apply modifiers over a bunch of characters (not just one!)
+        # elif c == "(":
+        #     # find the end of the bracketed text
+        #     end_pos = string.find(")", index)
+        #     if end_pos == -1:
+        #         raise KeySequenceError('`)` not found')
+        #     keys.extend(parse_keys(
+        #             string[index:end_pos],
+        #             modifiers=modifiers,
+        #             vk_packet=vk_packet))
+        #     index = end_pos + 1
 
         # Escape or named key
         elif c == "{":
@@ -1003,9 +1003,9 @@ def parse_keys(string,
                     current_keys[0].up = False
             keys.extend(current_keys)
 
-        # unmatched ")"
-        elif c == ')':
-            raise KeySequenceError('`)` should be preceeded by `(`')
+        # # unmatched ")"
+        # elif c == ')':
+        #     raise KeySequenceError('`)` should be preceeded by `(`')
 
         # unmatched "}"
         elif c == '}':
